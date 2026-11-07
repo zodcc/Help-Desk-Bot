@@ -1,41 +1,37 @@
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import Message
 
 from bot.config import settings
+from bot.middlewares.db import DBSessionMiddleware
+from bot.handlers import start, faq, booking, misc
 
-# Настраиваем логи, чтобы видеть в терминале, что происходит
 logging.basicConfig(
-    level=settings.LOG_LEVEL,
+        level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
 async def main() -> None:
-    # Инициализируем бота (берем токен из config.py) и включаем HTML-разметку
     bot = Bot(
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher()
 
-    # Простейший обработчик: реагирует на любой текст
-    @dp.message(F.text)
-    async def echo_handler(message: Message) -> None:
-        await message.answer(
-            f"🛠 <b>Связка работает!</b>\n\n"
-            f"Твой Telegram ID: <code>{message.from_user.id}</code>\n"
-            f"Текст сообщения: <i>{message.text}</i>"
-        )
+    # Подключаем БД ко всем сообщениям
+    dp.update.middleware(DBSessionMiddleware())
 
-    # Очищаем старые зависшие обновления и запускаем бота
+    # Подключаем роутеры (обработчики) в строгом порядке
+    dp.include_router(start.router)
+    dp.include_router(booking.router)
+    dp.include_router(misc.router)
+    dp.include_router(faq.router) # faq идет предпоследним (ловит остальной текст)
+
     await bot.delete_webhook(drop_pending_updates=True)
-    logging.info("HelpDeskBot запущен! (Эхо-режим)")
-    
-    # Запускаем бесконечный цикл прослушивания
+    logging.info("HelpDeskBot запущен! (Этап 2 готов)")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
