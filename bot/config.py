@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     WEB_HOST: str = "0.0.0.0"
     WEB_PORT: int = 8000
     JWT_SECRET: str = "change-me-in-production"
+    ADMIN_PASSWORD: str = "Cecfyyf11"
 
     TZ: str = "Europe/Moscow"
     LOG_LEVEL: str = "INFO"
