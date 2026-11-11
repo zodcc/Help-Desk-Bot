@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="sidebar">
+    <h2>HelpDesk</h2>
+    
+    <!-- Умная подсветка: если путь в браузере совпадает, добавляется класс active -->
+    <a href="/dashboard" class="{% if request.url.path == '/dashboard' %}active{% endif %}">📊 Дашборд</a>
+    <a href="/users" class="{% if request.url.path == '/users' %}active{% endif %}">👥 Пользователи</a>
+    <a href="/bookings" class="{% if request.url.path == '/bookings' %}active{% endif %}">📅 Записи</a>
+    <a href="/faq" class="{% if request.url.path == '/faq' %}active{% endif %}">❓ FAQ</a>
+    <a href="/slots" class="{% if request.url.path == '/slots' %}active{% endif %}">⏰ Слоты</a>
+    
+    <a href="/logout" style="margin-top: auto; color: #e74c3c; border-left-color: transparent;">🚪 Выйти</a>
+</div>
+<div class="main-content">
+    <!-- Кнопка "Назад", если мы не на дашборде -->
+    {% if request.url.path != '/dashboard' %}
+    <div style="margin-bottom: 20px;">
+        <a href="/dashboard" style="color: #3498db; text-decoration: none; font-size: 14px;">← Вернуться на Дашборд</a>
+    </div>
+    {% endif %}
+    
+    {% block content %}{% endblock %}
+</div>
+{% endblock %}

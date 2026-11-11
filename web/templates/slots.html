@@ -1,0 +1,67 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+    <h2 class="page-title">Управление слотами</h2>
+
+    <!-- Форма добавления слотов -->
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+        <h3 style="margin-bottom: 15px; color: #2c3e50;">Добавить новые слоты</h3>
+        <form method="post" action="/slots/add" style="display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 150px;">
+                <label style="font-size: 12px; color: #7f8c8d;">Дата</label>
+                <input type="date" name="date" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div style="flex: 2; min-width: 300px;">
+                <label style="font-size: 12px; color: #7f8c8d;">Время (через запятую)</label>
+                <input type="text" name="times" placeholder="Например: 10:00, 12:00, 14:00, 16:00" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <button type="submit" style="background: #2ecc71; height: 42px; margin-top: 18px; padding: 0 20px; border: none; border-radius: 4px; color: white; cursor: pointer;">Добавить</button>
+        </form>
+    </div>
+
+    <!-- Таблица существующих слотов -->
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead style="background: #f8f9fa; border-bottom: 1px solid #eee;">
+                <tr>
+                    <th style="padding: 15px;">ID</th>
+                    <th style="padding: 15px;">Дата</th>
+                    <th style="padding: 15px;">Время</th>
+                    <th style="padding: 15px;">Статус</th>
+                    <th style="padding: 15px;">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slot in slots %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 15px; color: #7f8c8d;">{{ slot.id }}</td>
+                    <td style="padding: 15px; font-weight: bold;">{{ slot.date }}</td>
+                    <td style="padding: 15px;">{{ slot.time.strftime('%H:%M') }}</td>
+                    <td style="padding: 15px;">
+                        {% if slot.is_booked %}
+                            <span style="background: #ffebee; color: #c62828; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Занят</span>
+                        {% else %}
+                            <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Свободен</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px;">
+                        {% if not slot.is_booked %}
+                        <form method="post" action="/slots/delete/{{ slot.id }}" style="margin: 0;">
+                            <button type="submit" style="background: #e74c3c; padding: 6px 12px; font-size: 13px; border: none; border-radius: 4px; color: white; cursor: pointer;" onclick="return confirm('Удалить этот слот?')">
+                                Удалить
+                            </button>
+                        </form>
+                        {% else %}
+                            <span style="color: #bdc3c7; font-size: 13px;">Занят клиентом</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="padding: 30px; text-align: center; color: #7f8c8d;">Слотов пока нет.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
