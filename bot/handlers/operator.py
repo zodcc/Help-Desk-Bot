@@ -9,7 +9,7 @@ from sqlalchemy import select
 from bot.config import settings
 from bot.database.models import User, Dialog, DialogStatus
 from bot.keyboards import main_menu_kb
-from bot.services.operator_service import create_dialog, save_message, get_active_dialog
+from bot.services.operator_service import create_dialog, save_message
 from bot.services.user_service import get_or_create_user
 
 router = Router()
@@ -32,7 +32,7 @@ async def start_dialog(message: Message, state: FSMContext, session: AsyncSessio
         await message.bot.send_message(
             chat_id=settings.OPERATOR_CHAT_ID,
             text=f"🆘 <b>Новый диалог #{dialog.id}</b>\n"
-                 f"Клиент: {user.full_name} (@{user.username})\n\n"
+                 f"Клиент: {user.full_name or 'Аноним'} (@{user.username or 'нет'})\n\n"
                  f"<i>Чтобы ответить, сделайте Reply на это сообщение.\nЧтобы закрыть диалог, напишите /close (реплаем).</i>"
         )
 
@@ -41,7 +41,6 @@ async def client_message(message: Message, state: FSMContext, session: AsyncSess
     data = await state.get_data()
     dialog_id = data.get("dialog_id")
     
-    # Проверяем, не закрыт ли уже диалог
     result = await session.execute(select(Dialog.status).where(Dialog.id == dialog_id))
     status = result.scalar_one_or_none()
 
@@ -56,7 +55,7 @@ async def client_message(message: Message, state: FSMContext, session: AsyncSess
     if settings.OPERATOR_CHAT_ID:
         await message.bot.send_message(
             chat_id=settings.OPERATOR_CHAT_ID,
-            text=f"💬 <b>Диалог #{dialog_id}</b> | {user.full_name}:\n{message.text}"
+            text=f"💬 <b>Диалог #{dialog_id}</b> | {user.full_name or 'Аноним'}:\n{message.text}"
         )
 
 
@@ -67,7 +66,8 @@ async def client_message(message: Message, state: FSMContext, session: AsyncSess
 @router.message(F.chat.id == settings.OPERATOR_CHAT_ID, Command("close"), F.reply_to_message)
 async def close_dialog(message: Message, session: AsyncSession) -> None:
     original_text = message.reply_to_message.text or ""
-    match = re.search(r"Диалог #(\d+)", original_text)
+    # Ищем паттерн "Диалог #123" (теперь без учета регистра)
+    match = re.search(r"Диалог #(\d+)", original_text, re.IGNORECASE)
     
     if not match:
         await message.reply("⚠️ Сделайте Reply (ответ) на сообщение бота с ID диалога, чтобы закрыть его.")
@@ -75,13 +75,11 @@ async def close_dialog(message: Message, session: AsyncSession) -> None:
 
     dialog_id = int(match.group(1))
     
-    # Закрываем в базе
     dialog = await session.get(Dialog, dialog_id)
     if dialog:
         dialog.status = DialogStatus.CLOSED
         await session.commit()
         
-        # Уведомляем клиента
         result = await session.execute(select(User.tg_id).where(User.id == dialog.user_id))
         client_tg_id = result.scalar_one_or_none()
         
@@ -98,7 +96,8 @@ async def close_dialog(message: Message, session: AsyncSession) -> None:
 @router.message(F.chat.id == settings.OPERATOR_CHAT_ID, F.reply_to_message, F.text)
 async def operator_reply(message: Message, session: AsyncSession) -> None:
     original_text = message.reply_to_message.text or ""
-    match = re.search(r"Диалог #(\d+)", original_text)
+    # Здесь тоже добавляем re.IGNORECASE
+    match = re.search(r"Диалог #(\d+)", original_text, re.IGNORECASE)
     
     if not match:
         await message.reply("⚠️ Не могу найти ID диалога. Сделайте Reply на сообщение бота.")
